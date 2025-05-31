@@ -2,14 +2,13 @@ class PuzzleGame {
     constructor() {
         this.board = [];
         this.moves = 0;
-        this.size = 4;
+        this.size = 3;  // 固定で3x3
         this.boardElement = document.getElementById('board');
         this.moveCountElement = document.getElementById('moveCount');
-        this.difficultySelect = document.getElementById('difficulty');
         this.themeSelect = document.getElementById('theme');
+        this.messageElement = document.getElementById('message');
         this.isSolving = false;
 
-        this.difficultySelect.addEventListener('change', () => this.changeDifficulty());
         this.themeSelect.addEventListener('change', () => this.changeTheme());
 
         this.changeTheme();
@@ -17,9 +16,12 @@ class PuzzleGame {
         this.render();
     }
 
-    changeDifficulty() {
-        this.size = parseInt(this.difficultySelect.value);
-        this.resetGame();
+    showMessage(text, duration = 2000) {
+        this.messageElement.textContent = text;
+        this.messageElement.classList.add('show');
+        setTimeout(() => {
+            this.messageElement.classList.remove('show');
+        }, duration);
     }
 
     changeTheme() {
@@ -57,7 +59,7 @@ class PuzzleGame {
     }
 
     initializeBoard() {
-        this.board = Array.from({length: this.size * this.size}, (_, i) => i);
+        this.board = Array.from({length: 9}, (_, i) => i);
         this.shuffleBoard();
     }
 
@@ -73,8 +75,6 @@ class PuzzleGame {
 
     isSolvable() {
         let inversions = 0;
-        const emptyTileRow = Math.floor(this.board.indexOf(0) / this.size);
-
         for (let i = 0; i < this.board.length - 1; i++) {
             for (let j = i + 1; j < this.board.length; j++) {
                 if (this.board[i] && this.board[j] && this.board[i] > this.board[j]) {
@@ -82,17 +82,11 @@ class PuzzleGame {
                 }
             }
         }
-
-        if (this.size % 2 === 1) {
-            return inversions % 2 === 0;
-        } else {
-            return (inversions + emptyTileRow) % 2 === 0;
-        }
+        return inversions % 2 === 0;
     }
 
     render() {
         this.boardElement.innerHTML = '';
-        this.boardElement.style.gridTemplateColumns = `repeat(${this.size}, 1fr)`;
         
         for (let i = 0; i < this.board.length; i++) {
             const tile = document.createElement('div');
@@ -119,9 +113,7 @@ class PuzzleGame {
             this.render();
             
             if (!skipCheck && this.isComplete()) {
-                setTimeout(() => {
-                    alert(`おめでとうございます！\n移動回数: ${this.moves}回`);
-                }, 100);
+                this.showMessage(`おめでとうございます！\n${this.moves}手でクリアしました！`, 3000);
             }
             return true;
         }
@@ -149,29 +141,11 @@ class PuzzleGame {
         this.moves = 0;
         this.initializeBoard();
         this.render();
+        this.showMessage('ゲームをリセットしました');
     }
 
     async surrender() {
         if (this.isSolving) return;
-
-        // サイズごとの状態数を計算
-        const factorial = (n) => {
-            let result = 1;
-            for (let i = 2; i <= n; i++) result *= i;
-            return result;
-        };
-        const stateCount = factorial(this.size * this.size - 1); // 空白を除いた数字の順列
-
-        // サイズが3x3より大きい場合
-        if (this.size > 3) {
-            let message = '自動解決できません。\n\n';
-            message += `${this.size}x${this.size}パズルの場合、\n`;
-            message += `可能な状態数は約${stateCount.toLocaleString()}通りです。\n\n`;
-            message += '計算量が膨大なため、ブラウザでの自動解決は3x3サイズのみ対応しています。';
-            alert(message);
-            return;
-        }
-
         if (!confirm('本当に降参しますか？自動で解決します。')) return;
 
         const surrenderButton = document.querySelector('.surrender');
@@ -181,10 +155,10 @@ class PuzzleGame {
 
         try {
             await this.solveAutomatically();
-            alert('パズルを解決しました！');
+            this.showMessage('パズルを解決しました！', 3000);
         } catch (error) {
             console.error('解決中にエラーが発生:', error);
-            alert('解決中にエラーが発生しました。');
+            this.showMessage('解決中にエラーが発生しました。', 3000);
         } finally {
             this.isSolving = false;
             surrenderButton.disabled = false;
@@ -192,14 +166,12 @@ class PuzzleGame {
         }
     }
 
-    // 新しい解決アルゴリズム
     async solveAutomatically() {
         const solution = this.findSolution();
         if (!solution) {
             throw new Error('解決策が見つかりませんでした。');
         }
 
-        // 解決策を1手ずつ実行
         for (const move of solution) {
             await this.moveTile(move, true);
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -207,13 +179,11 @@ class PuzzleGame {
     }
 
     findSolution() {
-        const goalState = Array.from({length: this.size * this.size}, (_, i) => (i + 1) % (this.size * this.size));
+        const goalState = Array.from({length: 9}, (_, i) => (i + 1) % 9);
         const startState = [...this.board];
         
-        // 状態を文字列に変換する関数
         const stateToString = state => state.join(',');
         
-        // マンハッタン距離を計算する関数
         const getManhattanDistance = (state) => {
             let distance = 0;
             for (let i = 0; i < state.length; i++) {
@@ -229,14 +199,12 @@ class PuzzleGame {
             return distance;
         };
 
-        // 可能な移動を取得する関数
         const getPossibleMoves = (state) => {
             const emptyIndex = state.indexOf(0);
             const moves = [];
             const row = Math.floor(emptyIndex / this.size);
             const col = emptyIndex % this.size;
 
-            // 上下左右の移動をチェック
             if (row > 0) moves.push(emptyIndex - this.size);
             if (row < this.size - 1) moves.push(emptyIndex + this.size);
             if (col > 0) moves.push(emptyIndex - 1);
@@ -245,14 +213,12 @@ class PuzzleGame {
             return moves;
         };
 
-        // A*アルゴリズムの実装
         const openSet = new Set([stateToString(startState)]);
         const cameFrom = new Map();
         const gScore = new Map([[stateToString(startState), 0]]);
         const fScore = new Map([[stateToString(startState), getManhattanDistance(startState)]]);
 
         while (openSet.size > 0) {
-            // fScoreが最小の状態を選択
             let current = null;
             let minFScore = Infinity;
             for (const stateStr of openSet) {
@@ -265,7 +231,6 @@ class PuzzleGame {
 
             const currentState = current.split(',').map(Number);
             if (stateToString(currentState) === stateToString(goalState)) {
-                // ゴールに到達したら、移動の手順を再構築
                 const moves = [];
                 let currentStr = current;
                 while (cameFrom.has(currentStr)) {
@@ -278,7 +243,6 @@ class PuzzleGame {
 
             openSet.delete(current);
 
-            // 可能な移動をすべて試す
             for (const move of getPossibleMoves(currentState)) {
                 const newState = [...currentState];
                 const emptyIndex = newState.indexOf(0);
@@ -295,14 +259,11 @@ class PuzzleGame {
             }
         }
 
-        return null; // 解決策が見つからない場合
+        return null;
     }
 }
 
-// グローバル変数としてゲームインスタンスを保持
 let game;
-
-// ゲーム開始
 window.onload = () => {
     game = new PuzzleGame();
 };
