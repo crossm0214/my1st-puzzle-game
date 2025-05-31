@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>15パズル</title>
+    <title>8パズル</title>
     <style>
         body {
             display: flex;
@@ -28,14 +28,18 @@
         }
         .board {
             display: grid;
+            grid-template-columns: repeat(3, 80px);
+            grid-template-rows: repeat(3, 80px);
             gap: 5px;
             background-color: var(--board-color, #333);
             padding: 5px;
             border-radius: 5px;
+            width: 250px;
+            height: 250px;
         }
         .tile {
-            width: 80px;
-            height: 80px;
+            width: 100%;
+            height: 100%;
             background-color: var(--tile-color, #fff);
             color: var(--text-color, #000);
             display: flex;
@@ -80,18 +84,32 @@
         .controls button.surrender:hover {
             background-color: #da190b;
         }
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+        .message.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
-    <h1>15パズル</h1>
+    <h1>8パズル</h1>
     <div class="settings">
-        <label>難易度：
-            <select id="difficulty">
-                <option value="3">3x3</option>
-                <option value="4" selected>4x4</option>
-                <option value="5">5x5</option>
-            </select>
-        </label>
         <label>テーマ：
             <select id="theme">
                 <option value="default">デフォルト</option>
@@ -109,6 +127,7 @@
             <button class="surrender" onclick="game.surrender()">降参</button>
         </div>
     </div>
+    <div id="message" class="message"></div>
     <script src="game.js"></script>
 </body>
 </html>
